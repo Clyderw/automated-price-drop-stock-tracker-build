@@ -1,0 +1,29 @@
+{
+  "database": "price_history.sqlite3",
+  "currency": "USD",
+  "products": [
+    {
+      "name": "Example headphones",
+      "url": "https://example.com/product-page",
+      "target_price": 99.99,
+      "currency": "USD",
+      "price_selector": ".price",
+      "stock_selector": ".availability",
+      "in_stock_text": "in stock"
+    }
+  ],
+  "alerts": {
+    "discord_webhook_url": "",
+    "telegram_bot_token": "",
+    "telegram_chat_id": "",
+    "email": {
+      "enabled": false,
+      "smtp_host": "smtp.gmail.com",
+      "smtp_port": 587,
+      "username": "you@example.com",
+      "password": "",
+      "from": "you@example.com",
+      "to": "you@example.com"
+    }
+  }
+}
