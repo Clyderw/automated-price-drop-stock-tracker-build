@@ -1,203 +1,253 @@
 # Automated Price Drop & Stock Tracker
 
-This is a small Python tracker for that one product you keep checking manually.
-It opens a product page, reads the current price and stock text, stores every
-check in a local SQLite database, and can ping you when the price finally drops
-under your target.
+This is a small Python tracker for that one product that you are constantly checking manually.
+You simply point it at the page with your product in it, have it parse the price and stock
+text for each product. Each price check gets added to a local SQLite database, and it can ping
+you when the price finally drops under the specified threshold.
 
-It is intentionally simple. No account system, no dashboard, no mystery service
-running in the background. Just a script, a config file, and your own machine.
+It is extremely simple. There is no account management, no dashboard of prices or stock level, no
+hidden mystery service running on some other server. There is just a single python script, a single config
+file, and your computer.
 
-## What it does
+What the script can do
 
-- Scrapes one or more product pages with `requests` and `BeautifulSoup`
-- Saves every price check to `price_history.sqlite3`
-- Tracks stock text when the page exposes it
-- Alerts through Discord, Telegram, or email
-- Lets you print recent price history from the command line
+- Scrapes one or more product pages. This uses the excellent requests library and BeautifulSoup.
+- Records every price check made to price_history.sqlite3.
+- Tracks the stock status if that text is clearly available on the page.
+- Alerts using Discord, Telegram or Email.
+- Allows for printing the saved price history to the console.
 
-## 1. Install it
+1. Getting setup
 
-Create a virtual environment first. It keeps the project tidy and makes it easy
-to remove later.
+It is best practice to use a virtual environment so you don't install it in your global
+Python. This allows you to install whatever you need for specific projects without cluttering.
 
-```bash
+``bash
+
 python3 -m venv .venv
+
 source .venv/bin/activate
+
 pip install -r requirements.txt
-```
 
-## 2. Create your config file
+`
 
-Copy the example config:
+2. Creating your config file
 
-```bash
+Simply copy the example file:
+
+`bash
+
 cp config.example.json config.json
-```
 
-Open `config.json` and replace the example product with the real one you want to
-track.
+`
 
-```json
+Then edit config.json. You'll want to replace the example product with the one(s)
+that you want to track. Below is an example of how your config.json will look.
+
+`json
+
 {
-  "name": "My headphones",
-  "url": "https://store.example.com/headphones",
-  "target_price": 129.99,
-  "currency": "USD",
-  "price_selector": ".product-price",
-  "stock_selector": ".stock-status",
-  "in_stock_text": "in stock"
+
+"name": "My headphones",
+
+"url": "https://store.example.com/headphones",
+
+"target_price": 129.99,
+
+"currency": "USD",
+
+"price_selector": ".product-price",
+
+"stock_selector": ".stock-status",
+
+"instocktext": "in stock"
+
 }
-```
 
-The most important part is `price_selector`. It is a CSS selector that points to
-the price on the product page.
+`
 
-A quick way to find it:
+Most importantly is price_selector. This should be a valid CSS selector for your
+product's price on the page. I would generally recommend one of two approaches for this:
 
-1. Open the product page in your browser.
-2. Right click the price and choose **Inspect**.
-3. Look for a useful class or id near the highlighted HTML.
-4. Put that selector in `config.json`.
+1. Open your target product page. Right click the price and hit 'Inspect'. Find an
+  element in the HTML structure of that price in your web inspector and copy its class
+  or id. Put it into the price_selector field of your config file. E.g.:
 
-For example:
+- ".price" means find an element with the class name "price".
+  - "#priceblockourprice" means find the element with the id "priceblockourprice".
+  - "[data-testid='price']" means find the element that has the attribute data-testid
+    and that attribute's value is exactly price.
 
-- `".price"` means an element with `class="price"`
-- `"#priceblock_ourprice"` means an element with `id="priceblock_ourprice"`
-- `"[data-testid='price']"` means an element with that exact attribute
+2. If your price is only displayed after the page finishes loading with JavaScript
+  you'll need to eventually switch to a JavaScript renderer like Playwright. You can
+  then use similar techniques but those are considerably more advanced than what this
+  script does currently.
 
-If the website renders prices only after JavaScript runs, this basic version may
-not see the price. That is when you would swap the scraper to Playwright later.
+3. Running a test check
 
-## 3. Run one check
+You can run a test check to ensure you have entered your selectors properly.
 
-```bash
+`bash
+
 python price_tracker.py check --dry-run
-```
 
-Dry run mode still scrapes and saves the price, but it prints alerts instead of
-sending them. I like doing the first few checks this way so I can confirm the
-selector is right before my phone starts buzzing.
+`
 
-You should see something like:
+This will run the check, save the price in your local database, but it will just print the alerts
+rather than sending any messages or emails. I'd recommend the few initial checks like this.
 
-```text
-My headphones: USD 119.99 (in stock) target USD 129.99
-Dry run alert:
-Price drop found: My headphones
-...
-```
+4. Picking an alerting method
 
-## 4. Pick an alert method
+You'll only need to fill out one of the following two depending on which alerting system you choose. Leave the
+unnecessary fields empty.
 
-You only need one of these. Leave the others blank.
+# Discord webhook
 
-### Discord webhook
+From your desired server on Discord, right-click and create a new webhook, then paste the URL
 
-Create a webhook in your Discord server, then paste the URL into:
+you're given into this field in your config.json file:
 
-```json
-"discord_webhook_url": "https://discord.com/api/webhooks/..."
-```
+`json
 
-This is the easiest option if you already use Discord on your phone.
+"discordwebhookurl": "https://discord.com/api/webhooks/..."
 
-### Telegram bot
+`
 
-Create a bot with BotFather, get the bot token, then put the token and your chat
-id into:
+# Telegram bot
 
-```json
-"telegram_bot_token": "123456:ABC...",
-"telegram_chat_id": "123456789"
-```
+On Telegram, start a chat with BotFather. He'll guide you through creating a new bot and will
+give you an API token for that bot. Then, after you send your bot a message in the Telegram app, you can
+access it with BotFather and see your "Chat ID" in there. Fill in both fields:
 
-### Email
+`json
 
-Turn email on in the config:
+"telegrambottoken": "123456:ABC...",
 
-```json
+"telegramchatid": "123456789"
+
+`
+
+# Email
+
+You'll first need to have email enabled and to supply your SMTP details.
+
+`json
+
 "email": {
-  "enabled": true,
-  "smtp_host": "smtp.gmail.com",
-  "smtp_port": 587,
-  "username": "you@example.com",
-  "password": "",
-  "from": "you@example.com",
-  "to": "you@example.com"
+
+"enabled": true,
+
+"smtp_host": "smtp.gmail.com",
+
+"smtp_port": 587,
+
+"username": "you@example.com",
+
+"password": "",
+
+"from": "you@example.com",
+
+"to": "you@example.com"
+
 }
-```
 
-For Gmail, use an app password rather than your normal account password. You can
-store it directly in `config.json`, but using an environment variable is safer:
+`
 
-```bash
-export PRICE_TRACKER_EMAIL_PASSWORD="your-app-password"
-```
+If you're using Gmail you'll need to create an app password for this since its
+normal password won't work when run from outside of Google's own applications. If your
+account has 2-factor authentication then even app passwords don't work, in which case
+you'll want to find a workaround like forwarding to a service that accepts simpler
+logins if you desperately want email alerts. You can also store your password here
+(though it is checked into git) or by setting it as an environment variable, which is generally
 
-`config.json` is ignored by Git so your private URLs and tokens do not get
-committed by accident.
+more secure:
 
-## 5. Check the saved history
+`bash
 
-```bash
+export PRICETRACKEREMAIL_PASSWORD="your-app-password"
+
+`
+
+config.json is already set up to be ignored by Git, so you won't push your private URLs,
+passwords, or tokens accidentally.
+
+5. Reading the history
+
+You can read any recorded prices for any tracked products.
+
+`bash
+
 python price_tracker.py history
-```
 
-Or for one product:
+`
 
-```bash
+Or specify a single product name.
+
+`bash
+
 python price_tracker.py history --product "My headphones"
-```
 
-The database is just SQLite, so you can also open it with any SQLite browser if
-you want to poke around.
+`
 
-## 6. Run it automatically
+As all the data is in SQLite, you're also able to open the price_history.sqlite3 file
+and browse it with a DB browser if you would like to take a closer look.
 
-On macOS or Linux, cron is enough:
+6. Automated checking
 
-```bash
+Now set your machine to run it regularly. On Linux/macOS this is typically done with cron.
+
+`bash
+
 crontab -e
-```
 
-Run it every hour:
+`
 
-```cron
-0 * * * * cd /path/to/this/project && .venv/bin/python price_tracker.py check
-```
+Enter this line to run every hour. Remember to replace /path/to/this/project with your
+project's actual path and to make sure the virtual environment is activated with the full path to python.
 
-On Windows, use Task Scheduler and point it at:
+`cron
 
-```text
-python price_tracker.py check
-```
+0     cd /path/to/this/project && .venv/bin/python price_tracker.py check
 
-Run it politely. Checking every few minutes is usually overkill and some shops
-will block noisy traffic. Every hour or every few hours is a better default.
+`
 
-## Adding more products
+On Windows you can do this with Task Scheduler. Set the action to be
+'Start a program'. In 'Program/script' put: python price_tracker.py check. If python
+is not added to the PATH, then specify the full path to python.
 
-Add another object to the `products` list:
+It's recommended to not have it check too frequently. Most websites frown upon you
+hammering their servers, and the more checks you perform, the more network traffic you
+have. Check hourly or on a similar cycle depending on the urgency and the website.
 
-```json
+Adding more products
+
+You just need to add more objects to the products list in your config.json file. Each product can have its own selectors and target price:
+
+`json
+
 {
-  "name": "Keyboard",
-  "url": "https://store.example.com/keyboard",
-  "target_price": 79.99,
-  "price_selector": ".sale-price",
-  "stock_selector": ".availability",
-  "in_stock_text": "available"
+
+"name": "Keyboard",
+
+"url": "https://store.example.com/keyboard",
+
+"target_price": 79.99,
+
+"price_selector": ".sale-price",
+
+"stock_selector": ".availability",
+
+"instocktext": "available"
+
 }
-```
 
-Each product can have its own selectors and target price.
+``
 
-## A couple of honest notes
+A word to the wise
 
-Some stores change their HTML often. If the script suddenly says it cannot find a
-price, inspect the page again and update the selector.
+Websites often update their HTML structure without prior notice. If you find your script stops working, it means the selectors in your config file are outdated. You'll just need to find new selectors and update them. 
 
-Some stores also dislike scraping. Keep the check interval reasonable, do not try
-to bypass logins or anti-bot protections, and respect the site's terms. This is
-meant for personal price watching, not hammering a shop's servers.
+Also, be mindful of the terms and conditions of the website you are monitoring, and don't push the limits or over-utilize your request frequency, as websites will frequently block abusive clients. 
+
+This script is designed for personal price monitoring.
